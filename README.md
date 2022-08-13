@@ -1,3 +1,16 @@
+Simple HTTPS server with optional Basic or Digest HTTP auth.
+
+Quickstart:
+
+```
+mkdir -p certs && openssl req -new -x509 -days 3650 -nodes -out certs/httpd.pem -keyout certs/httpd.key
+python3 https-server-auth.py --user test --pass test --cert certs/httpd.pem --key certs/httpd.key --path ./
+# add --basic or --digest for auth
+# see --help for more details
+```
+
+Original README follows.
+
 # Basic Auth Simple HTTPS Server
 
 Python 3 SimpleHTTPServer over HTTPS using Basic Auth
