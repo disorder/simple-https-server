@@ -1,4 +1,5 @@
 # https://svn.python.org/projects/sandbox/trunk/digestauth/httpserver.py
+import ssl
 from http.server import SimpleHTTPRequestHandler
 #import SimpleHTTPServer, BaseHTTPServer
 
@@ -7,7 +8,20 @@ import digestauth
 digester = digestauth.DigestAuthServer(default_realm='TestAuth', algorithm='MD5')
 #digester.parse_apache_digest_authfile('/var/www/passwords')
 
-class DigestAuthHandler(SimpleHTTPRequestHandler):
+# this should help with hangs
+# https://stackoverflow.com/a/68214507
+class ChildHandler(SimpleHTTPRequestHandler):
+    def __init__(self, request, *args, **kwargs):
+        #print('ID:', threading.get_ident(), '1 - SimpleTTPRequestHandler INIT CALLED')
+        if not ChildHandler.http:
+            request = ssl.wrap_socket(request,
+                                      certfile=ChildHandler.certfile,
+                                      keyfile=ChildHandler.keyfile,
+                                      server_side=True,
+                                      ssl_version=ssl.PROTOCOL_TLSv1_2)
+        super().__init__(request, *args, **kwargs)
+
+class DigestAuthHandler(ChildHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, directory=self.directory)
 

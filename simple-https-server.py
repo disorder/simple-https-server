@@ -30,18 +30,19 @@
 #                   https://localhost:4443
 #
 
-from httpserver import DigestAuthHandler, digester
+from httpserver import DigestAuthHandler, digester, ChildHandler
 import argparse
 import os
 import ssl
 import logging
 import http.server
+
 from base64 import b64decode, b64encode
 
 # Logging Setup
 #logging.basicConfig(filename='simple.log', level=logging.DEBUG)
 
-class BasicAuthHandler(http.server.SimpleHTTPRequestHandler):
+class BasicAuthHandler(ChildHandler):
 
     # Basic Auth Key ( !!Change Me!! -- admin/admin )
     key = 'YWRtaW46YWRtaW4='
@@ -96,7 +97,6 @@ class BasicAuthHandler(http.server.SimpleHTTPRequestHandler):
             self.log_date_time_string(),
             format % args))
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--bind', dest='bind', action='store', default='0.0.0.0',
@@ -122,6 +122,8 @@ if __name__ == '__main__':
                         help='Digest HTTP auth')
     parser.add_argument('--realm', dest='realm', action='store', default=None,
                         help='Digest HTTP auth realm')
+    parser.add_argument('--http', dest='http', action='store_true', default=False,
+                        help='Disable HTTPS')
     args = parser.parse_args()
     logging.basicConfig(level=logging.getLevelName(args.loglevel))
     logger = logging.getLogger()
@@ -140,7 +142,8 @@ if __name__ == '__main__':
         handler = BasicAuthHandler
         handler.key = b64encode((args.user + ':' + args.password).encode('utf-8')).decode('ascii')
     else:
-        handler = http.server.SimpleHTTPRequestHandler
+        #handler = http.server.SimpleHTTPRequestHandler
+        handler = ChildHandler
 
     handler.directory = args.path
 
@@ -155,7 +158,10 @@ if __name__ == '__main__':
     #    daemon_threads = True
     # this is supposed to fix hangs
     httpd = http.server.ThreadingHTTPServer((args.bind, args.port), handler)
-    httpd.socket = ssl.wrap_socket(httpd.socket, certfile=args.certfile, keyfile=args.keyfile, server_side=True)
+    #httpd.socket = ssl.wrap_socket(httpd.socket, certfile=args.certfile, keyfile=args.keyfile, server_side=True)
+    ChildHandler.certfile = args.certfile
+    ChildHandler.keyfile = args.keyfile
+    ChildHandler.http = args.http
     try:
         httpd.serve_forever()
     except Exception:
